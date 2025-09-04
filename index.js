@@ -26,10 +26,11 @@ const client = new MongoClient(uri, {
 
 async function run() {
     try {
-        // Connect the client to the server	(optional starting in v4.7)
+
         await client.connect();
 
         const eventsCollection = client.db('eventDB').collection('events');
+        const bookedCollection = client.db('eventDB').collection('booking');
 
         app.get('/events', async (req, res) => {
             const cursor = eventsCollection.find();
@@ -51,6 +52,51 @@ async function run() {
             res.send(result);
 
         })
+
+        //booked events api
+
+        app.get('/booking', async (req, res) => {
+            try {
+                const email = req.query.email;
+                const query = email ? { user_email: email } : {};
+                const bookings = await bookedCollection.find(query).toArray();
+                res.send(bookings);
+            } catch (error) {
+                res.status(500).send({ error: "Failed to fetch bookings" });
+            }
+        });
+
+        app.post('/booking', async (req, res) => {
+            const bookedEvents = req.body;
+            console.log(bookedEvents);
+
+            const result = await bookedCollection.insertOne(bookedEvents);
+            res.send(result);
+        });
+
+        app.delete('/booking/:id', async (req, res) => {
+            try {
+                const id = req.params.id;
+
+                // Try both
+                const result = await bookedCollection.deleteOne({
+                    $or: [
+                        { _id: id }, // string id
+                        { _id: ObjectId.isValid(id) ? new ObjectId(id) : null } // ObjectId
+                    ]
+                });
+
+                if (result.deletedCount === 1) {
+                    res.send({ success: true, message: "Booking cancelled successfully" });
+                } else {
+                    res.status(404).send({ success: false, message: "Booking not found" });
+                }
+            } catch (error) {
+                console.error("Delete error:", error);
+                res.status(500).send({ error: "Failed to delete booking" });
+            }
+        });
+
 
 
 
