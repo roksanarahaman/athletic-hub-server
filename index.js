@@ -98,6 +98,61 @@ async function run() {
         });
 
 
+        // manage events api
+        app.get('/events', async (req, res) => {
+            try {
+                const email = req.query.email;
+                const query = email ? { creatorEmail: email } : {};
+                const events = await eventsCollection.find(query).toArray();
+                res.send(events);
+            } catch (error) {
+                res.status(500).send({ error: "Failed to fetch events" });
+            }
+        });
+
+
+        app.delete('/events/:id', async (req, res) => {
+            try {
+                const id = req.params.id;
+                const query = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { _id: id };
+                const result = await eventsCollection.deleteOne(query);
+
+                if (result.deletedCount === 1) {
+                    res.send({ success: true, message: "Event deleted successfully" });
+                } else {
+                    res.status(404).send({ success: false, message: "Event not found" });
+                }
+            } catch (error) {
+                res.status(500).send({ error: "Failed to delete event" });
+            }
+        });
+
+
+        app.put('/events/:id', async (req, res) => {
+            try {
+                const id = req.params.id;
+                const updatedEvent = req.body;
+                const filter = { _id: new ObjectId(id) };
+                const updateDoc = {
+                    $set: {
+                        eventName: updatedEvent.eventName,
+                        eventType: updatedEvent.eventType,
+                        eventDate: updatedEvent.eventDate,
+                        description: updatedEvent.description,
+                        creatorEmail: updatedEvent.creatorEmail,
+                        creatorName: updatedEvent.creatorName,
+                        picture: updatedEvent.picture,
+                    },
+                };
+
+                const result = await eventsCollection.updateOne(filter, updateDoc);
+                res.send(result);
+            } catch (error) {
+                res.status(500).send({ error: "Failed to update event" });
+            }
+        });
+
+
 
 
 
